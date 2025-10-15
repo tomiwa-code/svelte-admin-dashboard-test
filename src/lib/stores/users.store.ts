@@ -3,50 +3,6 @@ import type { UserType } from "../types/user.type";
 
 const localStorageKey = "svelte-userhub-users";
 
-// Sample initial data
-const initialUsers: UserType[] = [
-  {
-    id: crypto.randomUUID(),
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "Admin",
-    avatar: "JD",
-    joinDate: "2023-01-15",
-  },
-  {
-    id: crypto.randomUUID(),
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "User",
-    avatar: "JS",
-    joinDate: "2023-02-20",
-  },
-  {
-    id: crypto.randomUUID(),
-    name: "Robert Johnson",
-    email: "robert.j@example.com",
-    role: "Editor",
-    avatar: "RJ",
-    joinDate: "2023-03-10",
-  },
-  {
-    id: crypto.randomUUID(),
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    role: "User",
-    avatar: "ED",
-    joinDate: "2023-04-05",
-  },
-  {
-    id: crypto.randomUUID(),
-    name: "Michael Wilson",
-    email: "michael.w@example.com",
-    role: "Admin",
-    avatar: "MW",
-    joinDate: "2023-05-12",
-  },
-];
-
 function createUserStore() {
   const { subscribe, set, update } = writable<UserType[]>([]);
   const browser = typeof window !== "undefined";
@@ -56,9 +12,6 @@ function createUserStore() {
     const stored = localStorage.getItem(localStorageKey);
     if (stored) {
       set(JSON.parse(stored));
-    } else {
-      set(initialUsers);
-      localStorage.setItem(localStorageKey, JSON.stringify(initialUsers));
     }
   }
 
@@ -96,9 +49,8 @@ function createUserStore() {
         return newUsers;
       }),
     reset: () => {
-      set(initialUsers);
-      if (browser)
-        localStorage.setItem(localStorageKey, JSON.stringify(initialUsers));
+      set([]);
+      if (browser) localStorage.setItem(localStorageKey, JSON.stringify([]));
     },
   };
 }
