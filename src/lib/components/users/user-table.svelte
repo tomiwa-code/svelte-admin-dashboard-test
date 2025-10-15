@@ -5,6 +5,7 @@
   import { cubicOut } from "svelte/easing";
   import UserForm from "./user-form.svelte";
   import DeleteConfirmation from "./delete-confirmation.svelte";
+  import { onMount } from "svelte";
 
   const { searchTerm } = $props();
 
@@ -15,6 +16,7 @@
   let sortDirection = $state<"asc" | "desc">("asc");
   let userToDelete = $state<UserType | null>(null);
   let showDeleteConfirmation = $state(false);
+  let currentPage = $state(1);
 
   let filteredUsers = $derived.by<UserType[]>(() => {
     let result = $users;
@@ -48,6 +50,81 @@
     return result;
   });
 
+  let pageSize = $state(5);
+  const totalPages = $derived(Math.ceil(filteredUsers.length / pageSize));
+
+  const startIndex = $derived((currentPage - 1) * pageSize);
+  const endIndex = $derived(startIndex + pageSize);
+  let paginatedUsers = $derived(filteredUsers.slice(startIndex, endIndex));
+
+  const startUser = $derived(
+    filteredUsers.length > 0 ? (currentPage - 1) * pageSize + 1 : 0
+  );
+  const endUser = $derived(
+    Math.min(currentPage * pageSize, filteredUsers.length)
+  );
+  const totalUsers = $derived(filteredUsers.length);
+  const pageNumbers = $derived(
+    Array.from({ length: totalPages }, (_, i) => i + 1)
+  );
+
+  const visiblePageNumbers = $derived.by(() => {
+    if (totalPages <= 7) {
+      return pageNumbers;
+    }
+
+    const current = currentPage;
+    const pages = [];
+
+    if (current <= 4) {
+      // Show first 5 pages and last page
+      pages.push(...pageNumbers.slice(0, 5));
+      pages.push("...");
+      pages.push(totalPages);
+    } else if (current >= totalPages - 3) {
+      // Show first page and last 5 pages
+      pages.push(1);
+      pages.push("...");
+      pages.push(...pageNumbers.slice(totalPages - 5));
+    } else {
+      // Show first page, current-2 to current+2, and last page
+      pages.push(1);
+      pages.push("...");
+      pages.push(current - 1, current, current + 1);
+      pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  });
+
+  // Ensure current page is valid
+  onMount(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      currentPage = totalPages;
+    } else if (currentPage < 1 && filteredUsers.length > 0) {
+      currentPage = 1;
+    } else if (filteredUsers.length === 0) {
+      currentPage = 1;
+    }
+  });
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      currentPage--;
+    }
+  };
+
+  const goToPage = (page: number) => {
+    currentPage = page;
+  };
+
   const handleSort = (field: keyof UserType) => {
     if (sortField === field) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
@@ -55,6 +132,7 @@
       sortField = field;
       sortDirection = "asc";
     }
+    currentPage = 1; // Reset to first page on sort
   };
 
   const openAddForm = () => {
@@ -98,6 +176,12 @@
 
     return classes[role] || "badge-user";
   };
+
+  $effect(() => {
+    if (searchTerm) {
+      currentPage = 1;
+    }
+  });
 </script>
 
 <div class="user-management">
@@ -107,6 +191,17 @@
       <span class="icon">+</span>
       Add New User
     </button>
+  </div>
+
+  <div class="table-info">
+    <div class="user-count">
+      Showing {startUser}-{endUser} of {totalUsers} users
+    </div>
+    {#if searchTerm}
+      <div class="search-info">
+        for "<strong>{searchTerm}</strong>"
+      </div>
+    {/if}
   </div>
 
   <div class="table-container">
@@ -129,7 +224,7 @@
         </tr>
       </thead>
       <tbody>
-        {#if filteredUsers.length === 0}
+        {#if paginatedUsers.length === 0}
           <tr>
             <td colspan="5" class="empty-state">
               {searchTerm
@@ -138,7 +233,7 @@
             </td>
           </tr>
         {:else}
-          {#each filteredUsers as user, idx (user.id)}
+          {#each paginatedUsers as user, idx (user.id)}
             <tr
               in:fly|global={{
                 duration: 400,
@@ -185,6 +280,60 @@
     </table>
   </div>
 
+  <!-- Pagination Controls -->
+  {#if totalPages > 1}
+    <div class="pagination-container">
+      <div class="pagination">
+        <!-- Previous Button -->
+        <button
+          class="pagination-btn {currentPage === 1 ? 'disabled' : ''}"
+          onclick={prevPage}
+          disabled={currentPage === 1}
+          title="Previous page"
+        >
+          ← Previous
+        </button>
+
+        <!-- Page Numbers -->
+        <div class="page-numbers">
+          {#each visiblePageNumbers as page}
+            {#if page === "..."}
+              <span class="page-ellipsis">…</span>
+            {:else}
+              <button
+                class="page-btn {currentPage === page ? 'active' : ''}"
+                onclick={() => goToPage(Number(page))}
+              >
+                {page}
+              </button>
+            {/if}
+          {/each}
+        </div>
+
+        <!-- Next Button -->
+        <button
+          class="pagination-btn {currentPage === totalPages ? 'disabled' : ''}"
+          onclick={nextPage}
+          disabled={currentPage === totalPages}
+          title="Next page"
+        >
+          Next →
+        </button>
+      </div>
+
+      <!-- Page Size Selector (Optional) -->
+      <div class="page-size-selector">
+        <label for="page-size">Users per page:</label>
+        <select id="page-size" bind:value={pageSize} class="page-size-select">
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+        </select>
+      </div>
+    </div>
+  {/if}
+
   {#if isFormOpen}
     <UserForm user={selectedUser} mode={formMode} onclose={closeForm} />
   {/if}
@@ -210,6 +359,16 @@
         margin: 0;
         font-size: 1.5rem;
       }
+    }
+
+    .table-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 0 1rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
     }
 
     .table-container {
@@ -325,6 +484,93 @@
           color: var(--text-secondary);
           padding: 3rem;
           font-style: italic;
+        }
+      }
+    }
+
+    .pagination-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 1rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .pagination-btn {
+          padding: 0.5rem 1rem;
+          border: 1px solid var(--border-color);
+          background: var(--bg-secondary);
+          color: var(--text-primary);
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-weight: 500;
+
+          &:hover:not(.disabled) {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-color);
+          }
+
+          &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+
+        .page-numbers {
+          display: flex;
+          gap: 0.25rem;
+
+          .page-ellipsis {
+            padding: 0.5rem 0.25rem;
+            color: var(--text-secondary);
+            user-select: none;
+          }
+
+          .page-btn {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 2.5rem;
+            font-weight: 500;
+
+            &:hover {
+              background: var(--bg-tertiary);
+              border-color: var(--accent-color);
+            }
+
+            &.active {
+              background: var(--accent-color);
+              color: white;
+              border-color: var(--accent-color);
+            }
+          }
+        }
+      }
+
+      .page-size-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+
+        .page-size-select {
+          padding: 0.25rem 0.5rem;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          background: var(--bg-secondary);
+          color: var(--text-primary);
         }
       }
     }
