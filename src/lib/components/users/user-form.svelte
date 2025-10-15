@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
-  import { users } from "../../stores/users";
+  import { users } from "../../stores/users.store";
   import type { UserType } from "../../types/user.type";
+  import { alerts } from "../../stores/alerts.store";
 
   const { user = null, mode = "add", onclose } = $props();
 
@@ -87,8 +88,10 @@
     try {
       if (mode === "add") {
         users.addUser(formData);
+        alerts.success(`${formData.name} has been added successfully.`);
       } else {
         users.updateUser(formData);
+        alerts.success(`${formData.name} has been updated successfully.`);
       }
 
       // Success - close form

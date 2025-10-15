@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade, scale } from "svelte/transition";
-  import { users } from "../../stores/users";
+  import { users } from "../../stores/users.store";
+  import { alerts } from "../../stores/alerts.store";
 
   const { user, oncancel } = $props();
   let isDeleting = $state(false);
@@ -10,6 +11,7 @@
     // Small delay to show loading state
     setTimeout(() => {
       users.deleteUser(user.id);
+      alerts.success(`User ${user?.name} has been deleted.`);
       handleCancel();
       isDeleting = false;
     }, 500);

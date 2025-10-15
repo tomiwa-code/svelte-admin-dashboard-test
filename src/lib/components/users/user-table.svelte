@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly } from "svelte/transition";
   import type { UserType, UserRole } from "../../types/user.type";
-  import { users } from "../../stores/users";
+  import { users } from "../../stores/users.store";
   import { cubicOut } from "svelte/easing";
   import UserForm from "./user-form.svelte";
   import DeleteConfirmation from "./delete-confirmation.svelte";

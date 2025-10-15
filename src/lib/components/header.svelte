@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { theme } from "../stores/theme";
+  import { theme } from "../stores/themes.store";
 
   const { onToggleSidebar } = $props();
   let currentTime = $state(new Date().toLocaleTimeString());

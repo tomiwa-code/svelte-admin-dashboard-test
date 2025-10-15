@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { users } from "../../stores/users";
+  import { users } from "../../stores/users.store";
   import SectionTitle from "../section-title.svelte";
   import DashboardCard from "./dashboard-card.svelte";
 
